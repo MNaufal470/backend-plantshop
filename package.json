@@ -1,20 +1,20 @@
 {
-  "name": "server.js",
+  "name": "index.js",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "index.js",
   "engines": {
     "node": "14.x"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "server-prod": "node server.js",
-    "server-dev": "npx nodemon server.js",
+    "server-prod": "node index.js",
+    "server-dev": "npx nodemon index.js",
     "client": "npm start --prefix ../frontend",
     "dev": "concurrently --kill-others-on-fail \"npm run server-dev\" \"npm run client\"",
     "seed:data": "node seeder/seeder",
     "seed:data-d": "node seeder/seeder -d",
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "author": "",
   "license": "ISC",
