@@ -5,7 +5,9 @@ const Category = require("../models/CategoryModel");
 const ObjectId = require("mongodb").ObjectId;
 const getUserOrder = async (req, res, next) => {
   try {
-    const orders = await Order.find({ user: ObjectId(req.user._id) });
+    const orders = await Order.find({ user: ObjectId(req.user._id) }).sort({
+      createdAt: "desc",
+    });
     res.send(orders);
   } catch (error) {
     next(error);
@@ -15,6 +17,7 @@ const getOrder = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate("user", "-password -isAdmin -_id -__v -createdAt -updatedAt")
+
       .orFail();
     res.send(order);
   } catch (error) {
