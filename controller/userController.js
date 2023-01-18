@@ -62,12 +62,12 @@ const loginUser = async (req, res, next) => {
       return res.status(400).send("Incorect password");
     let cookieParams = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      domain:
-        process.env.NODE_ENV === "production"
-          ? "https://backend-plantshop.vercel.app"
-          : "http://localhost:3000",
+      secure: true,
+      sameSite: "none",
+      // domain:
+      //   process.env.NODE_ENV === "production"
+      //     ? "https://backend-plantshop.vercel.app"
+      //     : "http://localhost:3000",
     };
     if (doNotLogout) {
       cookieParams = { ...cookieParams, maxAge: 1000 * 60 * 60 * 24 * 3 };
