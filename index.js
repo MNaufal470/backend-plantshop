@@ -7,7 +7,11 @@ const app = express();
 
 app.use(helmet());
 app.use(
-  cors({ origin: "https://frontend-plantshop.vercel.app", credentials: true })
+  cors({
+    origin: "https://frontend-plantshop.vercel.app",
+    credentials: true,
+    allowedHeaders: true,
+  })
 );
 const httpServer = createServer(app);
 
