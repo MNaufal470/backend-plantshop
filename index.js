@@ -4,22 +4,9 @@ const { createServer } = require("http");
 const express = require("express");
 const cors = require("cors");
 const app = express();
-app.use(function (req, res, next) {
-  // res.header("Access-Control-Allow-Origin", req.headers.origin);
-  // res.header(
-  //   "Access-Control-Allow-Headers",
-  //   "Origin, X-Requested-With, Content-Type, Accept"
-  // );
-  res.header(
-    "Access-Control-Allow-Headers",
-    "https://frontend-plantshop.vercel.app"
-  );
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE");
-  next();
-});
+
 app.use(helmet());
-app.use(cors({ origin: "https://frontend-plantshop.vercel.app" }));
+app.use(cors({ origin: true, credentials: true }));
 const httpServer = createServer(app);
 
 const apiRoutes = require("./routes/apiRoutes");
