@@ -4,13 +4,13 @@ const { createServer } = require("http");
 const express = require("express");
 const cors = require("cors");
 const app = express();
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  next();
-});
+
 app.use(
   cors({
-    origin: "https://frontend-plantshop.vercel.app",
+    origin: "http://localhost:3000",
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
     credentials: true,
   })
 );
