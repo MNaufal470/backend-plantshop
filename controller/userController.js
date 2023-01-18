@@ -61,7 +61,7 @@ const loginUser = async (req, res, next) => {
     if (!comparePassword(password, user.password))
       return res.status(400).send("Incorect password");
     let cookieParams = {
-      httpOnly: true,
+      httpOnly: false,
       secure: true,
       sameSite: "none",
     };
