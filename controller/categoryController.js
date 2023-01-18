@@ -3,7 +3,8 @@ const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 const { imageProfileValidate } = require("../utils/imageValidate");
-
+const cloudinary = require("../utils/cloudinaryConfig");
+const { image } = require("../utils/cloudinaryConfig");
 const getAllCategories = async (req, res, next) => {
   try {
     const category = await Category.find({}).orFail();
@@ -43,10 +44,17 @@ const deleteCategory = async (req, res, next) => {
   try {
     const category = await Category.findById(req.params.id).orFail();
     if (category?.image !== "/img/category/default.png") {
-      const finalPath = path.resolve("../frontend/public") + category.image;
-      fs.unlink(finalPath, (err) => {
-        if (err) return res.status(500).send(err);
-      });
+      if (
+        process.env.NODE_ENV === "production" &&
+        category.image.includes("res.cloudinary.com")
+      ) {
+        cloudinary.uploader.destroy(category.cloudID);
+      } else if (process.env.NODE_ENV === "development") {
+        const finalPath = path.resolve("../frontend/public") + category.image;
+        fs.unlink(finalPath, (err) => {
+          if (err) return res.status(500).send(err);
+        });
+      }
     }
     category.remove();
     res.send("category deleted");
@@ -57,39 +65,49 @@ const deleteCategory = async (req, res, next) => {
 
 const categoryImageUpload = async (req, res, next) => {
   try {
-    if (!req.files || !req.files.images) {
-      return res.status(400).send("No file were uploaded.");
-    }
-    let validateResult = imageProfileValidate(req.files.images);
-    if (validateResult.error) return res.status(400).send(validateResult.error);
     const category = await Category.findById(req.params.id).orFail();
-    const uploadDirectory = path.resolve(
-      __dirname,
-      "../../frontend",
-      "public",
-      "img",
-      "category"
-    );
-    let imageTables = [];
-    let oldImage = category.image;
-    if (oldImage !== "/img/category/default.png") {
-      const finalPath = path.resolve("../frontend/public") + oldImage;
-      fs.unlink(finalPath, function (err) {
-        if (err) return res.status(500).send(err);
+    if (process.env.NODE_ENV === "production") {
+      const { images } = req.body;
+      const result = await cloudinary.uploader.upload(images, {
+        folder: "category",
       });
-    }
-    if (Array.isArray(req.files.images)) {
-      imageTables = req.files.images;
+      category.image = result.secure_url;
+      category.cloudID = result.public_id;
     } else {
-      imageTables.push(req.files.images);
-    }
-    for (let image of imageTables) {
-      let fileName = uuidv4() + path.extname(image.name);
-      let uploadPath = uploadDirectory + "/" + fileName;
-      category.image = "/img/category/" + fileName;
-      image.mv(uploadPath, function (err) {
-        if (err) return res.status(500).send(err);
-      });
+      if (!req.files || !req.files.images) {
+        return res.status(400).send("No file were uploaded.");
+      }
+      let validateResult = imageProfileValidate(req.files.images);
+      if (validateResult.error)
+        return res.status(400).send(validateResult.error);
+      const uploadDirectory = path.resolve(
+        __dirname,
+        "../../frontend",
+        "public",
+        "img",
+        "category"
+      );
+      let imageTables = [];
+      let oldImage = category.image;
+      if (oldImage !== "/img/category/default.png") {
+        const finalPath = path.resolve("../frontend/public") + oldImage;
+        fs.unlink(finalPath, function (err) {
+          if (err) return res.status(500).send(err);
+        });
+      }
+      if (Array.isArray(req.files.images)) {
+        imageTables = req.files.images;
+      } else {
+        imageTables.push(req.files.images);
+      }
+      for (let image of imageTables) {
+        let fileName = uuidv4() + path.extname(image.name);
+        let uploadPath = uploadDirectory + "/" + fileName;
+        category.image = "/img/category/" + fileName;
+        image.mv(uploadPath, function (err) {
+          if (err) return res.status(500).send(err);
+        });
+      }
     }
     await category.save();
     return res.status(201).send("files uploaded");
@@ -133,6 +151,28 @@ const categoryUpdate = async (req, res, next) => {
   }
 };
 
+const cloudinaryImageEdit = async (req, res, next) => {
+  try {
+    const { images } = req.body;
+    if (!images.includes("image/")) {
+      return res
+        .status(400)
+        .json({ message: "Incorect mime type (should be jpg,jpeg or png)" });
+    }
+    const category = await Category.findById(req.params.id).orFail();
+    await cloudinary.uploader.destroy(category.cloudID);
+    const result = await cloudinary.uploader.upload(images, {
+      folder: "category",
+    });
+    category.image = result.secure_url;
+    category.cloudID = result.public_id;
+    category.save();
+    return res.status(201).send("files uploaded");
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAllCategories,
   getCategory,
@@ -141,4 +181,5 @@ module.exports = {
   categoryImageUpload,
   categoryImageDeleted,
   categoryUpdate,
+  cloudinaryImageEdit,
 };

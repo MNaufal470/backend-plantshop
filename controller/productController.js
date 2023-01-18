@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const { v4: uuidv4 } = require("uuid");
 const { imageValidate } = require("../utils/imageValidate");
-
+const cloudinary = require("../utils/cloudinaryConfig");
 const getProductBy = async (req, res, next) => {
   try {
     const newArrivals = await Product.find({}).sort({ createdAt: -1 }).limit(5);
@@ -42,7 +42,7 @@ const adminGetProducts = async (req, res, next) => {
 const getDetailProduct = async (req, res, next) => {
   try {
     const product = await Product.findById(req.params.id)
-      .populate("reviews")
+      .populate({ path: "reviews", options: { sort: { users: -1 } } })
       .orFail();
     res.status(200).send(product);
   } catch (error) {
@@ -116,14 +116,22 @@ const adminUpdateProduct = async (req, res, next) => {
 
 const adminDeleteProducts = async (req, res, next) => {
   try {
-    const product = await Product.findById(req.params.productId);
-    const finalPath = path.resolve("../frontend/public");
-    if (product.images.length > 0) {
-      product.images.map((img) =>
-        fs.unlink(finalPath + img.path, (err) => {
-          if (err) return res.status(500).send(err);
-        })
-      );
+    const product = await Product.findById(req.params.productId).orFail();
+    if (process.env.NODE_ENV === "production") {
+      product.images.map((img) => {
+        if (img.cloudID) {
+          cloudinary.uploader.destroy(img.cloudID);
+        }
+      });
+    } else {
+      const finalPath = path.resolve("../frontend/public");
+      if (product.images.length > 0) {
+        product.images.map((img) =>
+          fs.unlink(finalPath + img.path, (err) => {
+            if (err) return res.status(500).send(err);
+          })
+        );
+      }
     }
     const categoryExisted = await Category.find({
       name: product.category,
@@ -140,39 +148,59 @@ const adminDeleteProducts = async (req, res, next) => {
 
 const adminUploadImages = async (req, res, next) => {
   try {
-    if (!req.files || !req.files.images)
-      return res.status(400).send("No files were uploaded.");
-    let validateResult = imageValidate(req.files.images);
-    if (validateResult.error) return res.status(400).send(validateResult.error);
     const product = await Product.findById(req.params.productId).orFail();
 
-    const limitedImage = product.images.length >= 3;
-    if (limitedImage) {
-      return res
-        .status(400)
-        .send("Images has already 3 please remove one and upload ");
-    }
-    const uploadDirectory = path.resolve(
-      __dirname,
-      "../../frontend",
-      "public",
-      "img",
-      "products"
-    );
-    let imageTables = [];
-    if (Array.isArray(req.files.images)) {
-      imageTables = req.files.images;
-    } else {
-      imageTables.push(req.files.images);
-    }
-    for (let image of imageTables) {
-      let fileName = uuidv4() + path.extname(image.name);
-      let uploadPath = uploadDirectory + "/" + fileName;
-      product.images.push({ path: "/img/products/" + fileName });
-      image.mv(uploadPath, function (err) {
-        if (err) return res.status(500).send(err);
+    if (process.env.NODE_ENV === "production") {
+      // Upload To Cloudinary
+      const { image } = req.body;
+      if (!image.includes("image/")) {
+        return res
+          .status(400)
+          .json({ message: "Incorect mime type (should be jpg,jpeg or png)" });
+      }
+      const result = await cloudinary.uploader.upload(image, {
+        folder: "products",
       });
+      product.images.push({
+        path: result.secure_url,
+        cloudID: result.public_id,
+      });
+    } else {
+      if (!req.files || !req.files.images)
+        return res.status(400).send("No files were uploaded.");
+      let validateResult = imageValidate(req.files.images);
+      if (validateResult.error)
+        return res.status(400).send(validateResult.error);
+
+      const limitedImage = product.images.length >= 3;
+      if (limitedImage) {
+        return res
+          .status(400)
+          .send("Images has already 3 please remove one and upload ");
+      }
+      const uploadDirectory = path.resolve(
+        __dirname,
+        "../../frontend",
+        "public",
+        "img",
+        "products"
+      );
+      let imageTables = [];
+      if (Array.isArray(req.files.images)) {
+        imageTables = req.files.images;
+      } else {
+        imageTables.push(req.files.images);
+      }
+      for (let image of imageTables) {
+        let fileName = uuidv4() + path.extname(image.name);
+        let uploadPath = uploadDirectory + "/" + fileName;
+        product.images.push({ path: "/img/products/" + fileName });
+        image.mv(uploadPath, function (err) {
+          if (err) return res.status(500).send(err);
+        });
+      }
     }
+
     await product.save();
     return res.status(201).send("files uploaded");
   } catch (error) {
@@ -183,10 +211,20 @@ const adminUploadImages = async (req, res, next) => {
 const adminDeleteImage = async (req, res, next) => {
   try {
     const imagePath = decodeURIComponent(req.params.pathImage);
-    const finalPath = path.resolve("../frontend/public") + imagePath;
-    fs.unlink(finalPath, (error) => {
-      if (error) return res.status(500).send(error);
-    });
+    if (process.env.NODE_ENV === "production") {
+      const { cloudID, path } = req.body;
+      cloudinary.uploader.destroy(cloudID);
+      await Product.findByIdAndUpdate(
+        { _id: req.params.productId },
+        { $pull: { images: { path: path } } }
+      ).orFail();
+      res.send("image deleted");
+    } else {
+      const finalPath = path.resolve("../frontend/public") + imagePath;
+      fs.unlink(finalPath, (error) => {
+        if (error) return res.status(500).send(error);
+      });
+    }
     await Product.findByIdAndUpdate(
       { _id: req.params.productId },
       { $pull: { images: { path: imagePath } } }

@@ -29,8 +29,8 @@ const createOrder = async (req, res, next) => {
     const { cartItems, orderTotal, paymentMethod } = req.body;
     if (!cartItems || !orderTotal)
       return res.status(400).send("All inputs is required");
-    let ids = cartItems.map((item) => item.productID);
-    let qty = cartItems.map((item) => item.amount);
+    let ids = cartItems.map((item) => item.productId);
+    let qty = cartItems.map((item) => item.count);
     await Product.find({ _id: { $in: ids } }).then((products) => {
       products.forEach(function (product, idx) {
         product.sales += qty[idx];
@@ -81,7 +81,7 @@ const updatedOrderToDelivered = async (req, res, next) => {
 const getOrders = async (req, res, next) => {
   try {
     const orders = await Order.find({}).populate("user", "-password").sort({
-      paymentMethod: "desc",
+      createdAt: -1,
     });
     res.send(orders);
   } catch (error) {

@@ -52,6 +52,9 @@ const userSchema = mongoose.Schema(
       required: true,
       default: false,
     },
+    cloudID: {
+      type: String,
+    },
   },
   {
     timestamps: true,

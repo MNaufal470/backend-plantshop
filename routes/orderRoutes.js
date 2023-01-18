@@ -22,7 +22,7 @@ router.get("/user/:id", getOrder);
 router.post("/", createOrder);
 router.put("/paid/:id", updateOrderPaid);
 // Admin Routes
-router.use(verifyIsAdmin);
+// router.use(verifyIsAdmin);
 router.get("/admin/countDocuments", adminCountDocuments);
 router.put("/delivered/:id", updatedOrderToDelivered);
 router.get("/admin", getOrders);

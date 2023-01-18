@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Review = require("./ReviewModel");
 const imageSchema = mongoose.Schema({
   path: { type: String, required: true },
+  cloudID: { type: String },
 });
 
 const productSchema = mongoose.Schema(

@@ -16,20 +16,20 @@ const {
   verifyIsLoggedIn,
   verifyIsAdmin,
 } = require("../middleware/verifyAuthToken");
-const jwt = require("jsonwebtoken");
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);
-
 router.get("/logout", (req, res) => {
   return res.clearCookie("access_token").send("access token cleared");
 });
 // user routes
 router.use(verifyIsLoggedIn);
+router.put("/profile/cloudinary/edit/:id", editImageProfile);
 router.get("/profile/:id", getUserProfile);
 router.put("/profile/:id", updateUserProfile);
 router.post("/profile/imageProfile/upload/:id", updateImageProfile);
 router.put("/profile/imageProfile/edit/:id/:imagePath", editImageProfile);
+// CLOUDINARY
 
 //  Admin Routes
 router.use(verifyIsAdmin);

@@ -5,7 +5,7 @@ const fs = require("fs");
 const { hashPassword, comparePassword } = require("../utils/hashPassword");
 const generateAuthToken = require("../utils/generateAuthToken");
 const { imageProfileValidate } = require("../utils/imageValidate");
-
+const cloudinary = require("../utils/cloudinaryConfig");
 const registerUser = async (req, res, next) => {
   try {
     const { name, userName, lastName, email, password } = req.body;
@@ -99,6 +99,7 @@ const loginUser = async (req, res, next) => {
           zipCode: user.zipCode,
           city: user.city,
           state: user.state,
+          image: user.image,
         },
       });
   } catch (error) {
@@ -119,7 +120,9 @@ const getUserProfile = async (req, res, next) => {
 const updateUserProfile = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const user = await User.findById(id).orFail();
+    const user = await User.findById(id)
+      .select(" -createdAt -updatedAt -userName -__v ")
+      .orFail();
     user.name = req.body.name || user.name;
     user.lastName = req.body.lastName || user.lastName;
     user.phoneNumber = req.body.phoneNumber || user.phoneNumber;
@@ -134,15 +137,14 @@ const updateUserProfile = async (req, res, next) => {
       user.password = user.password;
     }
     await user.save();
+    const userWithoutPassword = await User.findById(id)
+      .select(" -createdAt -updatedAt -userName -__v -password")
+      .orFail();
     res.json({
       success: "User Updated",
       userUpdated: {
-        _id: user._id,
-        name: user.name,
-        lastName: user.lastName,
-        userName: user.userName,
-        email: user.email,
-        isAdmin: user.isAdmin,
+        ...userWithoutPassword._doc,
+        image: user.image,
       },
     });
   } catch (error) {
@@ -152,49 +154,73 @@ const updateUserProfile = async (req, res, next) => {
 
 const updateImageProfile = async (req, res, next) => {
   try {
-    if (!req.files || !req.files.images) {
-      return res.status(400).send("No file were uploaded.");
-    }
-    let validateResult = imageProfileValidate(req.files.images);
-    if (validateResult.error) return res.status(400).send(validateResult.error);
+    const { sendImage } = req.body;
+    if (!sendImage) return res.send("no image upload");
     const user = await User.findById(req.params.id).orFail();
-    const uploadDirectory = path.resolve(
-      __dirname,
-      "../../frontend",
-      "public",
-      "img",
-      "user_profile"
-    );
-    let imageTables = [];
-    if (Array.isArray(req.files.images)) {
-      imageTables = req.files.images;
-    } else {
-      imageTables.push(req.files.images);
-    }
-    for (let image of imageTables) {
-      let fileName = uuidv4() + path.extname(image.name);
-      let uploadPath = uploadDirectory + "/" + fileName;
-      user.image = "/img/user_profile/" + fileName;
-      image.mv(uploadPath, function (err) {
-        if (err) return res.status(500).send(err);
+    if (process.env.NODE_ENV === "production") {
+      const result = await cloudinary.uploader.upload(sendImage, {
+        folder: "user-profile",
       });
+      user.image = result.secure_url;
+      user.cloudID = result.public_id;
+      await user.save();
+      return res.status(201).send(user.image);
+    } else {
+      let imageTables = [];
+      if (Array.isArray(req.files.images)) {
+        imageTables = req.files.images;
+      } else {
+        imageTables.push(req.files.images);
+      }
+      let validateResult = imageProfileValidate(req.files.images);
+      if (validateResult.error)
+        return res.status(400).send(validateResult.error);
+
+      const uploadDirectory = path.resolve(
+        __dirname,
+        "../../frontend",
+        "public",
+        "img",
+        "user_profile"
+      );
+      for (let image of imageTables) {
+        let fileName = uuidv4() + path.extname(image.name);
+        let uploadPath = uploadDirectory + "/" + fileName;
+        user.image = "/img/user_profile/" + fileName;
+        image.mv(uploadPath, function (err) {
+          if (err) return res.status(500).send(err);
+        });
+      }
+      await user.save();
+      return res.status(201).send(user.image);
     }
-    await user.save();
-    return res.status(201).send(user.image);
   } catch (error) {
     next(error);
   }
 };
 
 const editImageProfile = async (req, res, next) => {
-  const imagePath = decodeURIComponent(req.params.imagePath);
   const user = await User.findById(req.params.id).orFail();
   try {
-    if (imagePath !== "/img/user_profile/default.png") {
-      const finalPath = path.resolve("../frontend/public") + imagePath;
-      fs.unlink(finalPath, (err) => {
-        if (err) return res.status(500).send(err);
-      });
+    if (user.image !== "/img/user_profile/default.png") {
+      if (process.env.NODE_ENV === "production") {
+        cloudinary.uploader.destroy(user.cloudID);
+        const { images } = req.body;
+        const result = await cloudinary.uploader.upload(images, {
+          folder: "user-profile",
+        });
+        user.image = result.secure_url;
+        user.cloudID = result.public_id;
+      } else if (
+        process.env.NODE_ENV === "development" &&
+        user.image.includes("/img")
+      ) {
+        const imagePath = decodeURIComponent(req.params.imagePath);
+        const finalPath = path.resolve("../frontend/public") + imagePath;
+        fs.unlink(finalPath, (err) => {
+          if (err) return res.status(500).send(err);
+        });
+      }
       user.save();
     }
     return res.send("clear");
@@ -248,10 +274,17 @@ const adminDeleteUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).orFail();
     if (user.image && user.image !== "/img/user_profile/default.png") {
-      const finalPath = path.resolve("../frontend/public") + user.image;
-      fs.unlink(finalPath, (err) => {
-        if (err) return res.status(500).send(err);
-      });
+      if (
+        process.env.NODE_ENV === "production" &&
+        user.image.includes("res.cloudinary.com")
+      ) {
+        cloudinary.uploader.destroy(user.cloudID);
+      } else if (process.env.NODE_ENV === "development") {
+        const finalPath = path.resolve("../frontend/public") + user.image;
+        fs.unlink(finalPath, (err) => {
+          if (err) return res.status(500).send(err);
+        });
+      }
     }
     user.remove();
     res.send("user deleted");
@@ -260,16 +293,6 @@ const adminDeleteUser = async (req, res, next) => {
   }
 };
 
-const decoded = async (req, res, next) => {
-  try {
-    const decoded = encodeURIComponent(
-      "/img/user_profile/1a4f9ce9-95d5-4933-8917-10603b3cffa6.jpg"
-    );
-    res.send(decoded);
-  } catch (error) {
-    next(error);
-  }
-};
 module.exports = {
   registerUser,
   loginUser,
@@ -281,5 +304,4 @@ module.exports = {
   getUser,
   adminUpdateUser,
   adminDeleteUser,
-  decoded,
 };

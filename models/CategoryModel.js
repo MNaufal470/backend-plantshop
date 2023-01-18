@@ -4,6 +4,7 @@ const categorySchema = mongoose.Schema({
   name: { type: String, required: true, unique: true },
   image: { type: String, default: "/img/category/default.png" },
   attrs: [{ key: { type: String }, value: [] }],
+  cloudID: { type: String },
   totalProduct: { type: Number },
 });
 categorySchema.index({ name: 1 });

@@ -8,6 +8,7 @@ const {
   categoryImageUpload,
   categoryImageDeleted,
   categoryUpdate,
+  cloudinaryImageEdit,
 } = require("../controller/categoryController");
 const {
   verifyIsAdmin,
@@ -25,5 +26,7 @@ router.put("/:id", categoryUpdate);
 
 router.put("/image/upload/:id", categoryImageUpload);
 router.delete("/image/delete/:imagePath/:categoryId", categoryImageDeleted);
+// cloudinary edit
+router.put("/image/upload/edit/:id", cloudinaryImageEdit);
 
 module.exports = router;
