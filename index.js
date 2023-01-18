@@ -16,7 +16,7 @@ app.use(function (req, res, next) {
   next();
 });
 app.use(helmet());
-app.use(cors({ origin: "http://localhost:3000" }));
+app.use(cors({ origin: "https://frontend-plantshop.vercel.app" }));
 const httpServer = createServer(app);
 
 const apiRoutes = require("./routes/apiRoutes");
