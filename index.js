@@ -27,7 +27,7 @@ app.use("/api", apiRoutes);
 const path = require("path");
 
 app.get("/", (req, res) => {
-  res.json({ message: "API running..." });
+  res.json({ message: "API running for " + process.env.NODE_ENV });
 });
 
 const PORT = process.env.PORT || 5000;
