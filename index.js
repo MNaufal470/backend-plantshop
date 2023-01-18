@@ -6,7 +6,9 @@ const cors = require("cors");
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: true, credentials: true }));
+app.use(
+  cors({ origin: "https://frontend-plantshop.vercel.app", credentials: true })
+);
 const httpServer = createServer(app);
 
 const apiRoutes = require("./routes/apiRoutes");
