@@ -61,8 +61,8 @@ const loginUser = async (req, res, next) => {
     if (!comparePassword(password, user.password))
       return res.status(400).send("Incorect password");
     let cookieParams = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "de",
       sameSite: "strict",
     };
     if (doNotLogout) {
