@@ -66,7 +66,7 @@ const loginUser = async (req, res, next) => {
       sameSite: "strict",
       domain:
         process.env.NODE_ENV === "production"
-          ? "https://frontend-plantshop.vercel.app"
+          ? "https://backend-plantshop.vercel.app"
           : "http://localhost:3000",
     };
     if (doNotLogout) {
