@@ -5,15 +5,6 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 
-app.use(
-  cors({
-    origin: "https://frontend-plantshop.vercel.app",
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-    credentials: true,
-  })
-);
 app.use(helmet());
 
 const httpServer = createServer(app);
@@ -25,7 +16,15 @@ const bodyParser = require("body-parser");
 // Connect DB
 const connectDB = require("./config/db");
 connectDB();
-
+app.use(
+  cors({
+    origin: "http://frontend-plantshop.vercel.app",
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 app.use(fileUpload());
 
