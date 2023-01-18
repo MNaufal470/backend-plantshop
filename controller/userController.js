@@ -64,10 +64,6 @@ const loginUser = async (req, res, next) => {
       httpOnly: true,
       secure: true,
       sameSite: "none",
-      domain:
-        process.env.NODE_ENV === "production"
-          ? "https://frontend-plantshop.vercel.app"
-          : "http://localhost:3000",
     };
     if (doNotLogout) {
       cookieParams = { ...cookieParams, maxAge: 1000 * 60 * 60 * 24 * 3 };
