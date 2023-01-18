@@ -4,15 +4,18 @@ const { createServer } = require("http");
 const express = require("express");
 const cors = require("cors");
 const app = express();
-
-app.use(helmet());
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  next();
+});
 app.use(
   cors({
     origin: "https://frontend-plantshop.vercel.app",
     credentials: true,
-    allowedHeaders: true,
   })
 );
+app.use(helmet());
+
 const httpServer = createServer(app);
 
 const apiRoutes = require("./routes/apiRoutes");
