@@ -221,8 +221,8 @@ const editImageProfile = async (req, res, next) => {
       fs.unlink(finalPath, (err) => {
         if (err) return res.status(500).send(err);
       });
-      user.save();
     }
+    user.save();
     return res.send("clear");
   } catch (error) {
     next(error);
