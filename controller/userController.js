@@ -203,7 +203,9 @@ const editImageProfile = async (req, res, next) => {
   const user = await User.findById(req.params.id).orFail();
   try {
     if (process.env.NODE_ENV === "production") {
-      cloudinary.uploader.destroy(user.cloudID);
+      if (user.cloudID) {
+        cloudinary.uploader.destroy(user.cloudID);
+      }
       const { images } = req.body;
       const result = await cloudinary.uploader.upload(images, {
         folder: "user-profile",
