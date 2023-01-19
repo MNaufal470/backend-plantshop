@@ -202,25 +202,23 @@ const updateImageProfile = async (req, res, next) => {
 const editImageProfile = async (req, res, next) => {
   const user = await User.findById(req.params.id).orFail();
   try {
-    if (user.image !== "/img/user_profile/default.png") {
-      if (process.env.NODE_ENV === "production") {
-        cloudinary.uploader.destroy(user.cloudID);
-        const { images } = req.body;
-        const result = await cloudinary.uploader.upload(images, {
-          folder: "user-profile",
-        });
-        user.image = result.secure_url;
-        user.cloudID = result.public_id;
-      } else if (
-        process.env.NODE_ENV === "development" &&
-        user.image.includes("/img")
-      ) {
-        const imagePath = decodeURIComponent(req.params.imagePath);
-        const finalPath = path.resolve("../frontend/public") + imagePath;
-        fs.unlink(finalPath, (err) => {
-          if (err) return res.status(500).send(err);
-        });
-      }
+    if (process.env.NODE_ENV === "production") {
+      cloudinary.uploader.destroy(user.cloudID);
+      const { images } = req.body;
+      const result = await cloudinary.uploader.upload(images, {
+        folder: "user-profile",
+      });
+      user.image = result.secure_url;
+      user.cloudID = result.public_id;
+    } else if (
+      process.env.NODE_ENV === "development" &&
+      user.image.includes("/img")
+    ) {
+      const imagePath = decodeURIComponent(req.params.imagePath);
+      const finalPath = path.resolve("../frontend/public") + imagePath;
+      fs.unlink(finalPath, (err) => {
+        if (err) return res.status(500).send(err);
+      });
       user.save();
     }
     return res.send("clear");
