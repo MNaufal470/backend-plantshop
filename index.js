@@ -18,7 +18,7 @@ const connectDB = require("./config/db");
 connectDB();
 app.use(
   cors({
-    origin: "https://frontend-plantshop.vercel.app",
+    origin: "https://plantex.my.id",
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
   })
