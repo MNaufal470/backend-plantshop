@@ -34,6 +34,7 @@ const createOrder = async (req, res, next) => {
     await Product.find({ _id: { $in: ids } }).then((products) => {
       products.forEach(function (product, idx) {
         product.sales += qty[idx];
+        product.stocks -= qty[idx];
         product.save();
       });
     });
