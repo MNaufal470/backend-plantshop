@@ -19,6 +19,7 @@ connectDB();
 app.use(
   cors({
     origin: "https://plantex.my.id",
+    // origin: "http://localhost:3000",
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     credentials: true,
   })

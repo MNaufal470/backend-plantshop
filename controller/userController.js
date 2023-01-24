@@ -111,7 +111,7 @@ const getUserProfile = async (req, res, next) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id).orFail();
-    res.status(200).send(user);
+    res.status(200).json(user);
   } catch (error) {
     next(error);
   }
